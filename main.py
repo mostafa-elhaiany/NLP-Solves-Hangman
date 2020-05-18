@@ -3,6 +3,7 @@ from Solver.models import *
 from Solver.predict import *
 from Solver.train import *
 from glob import glob
+from Game.Hangman import *
 
 #setting random seed for training
 np.random.seed(42)
@@ -11,4 +12,7 @@ np.random.seed(42)
  
 
 
-predict('models/model2.h5', 'original','_r_g_nal')
+# predict('models/model2.h5', 'original','_r_g_nal')
+
+h=Hangman()
+h.run()
