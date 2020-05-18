@@ -1,8 +1,9 @@
 import pygame, random
+import numpy as np
 from Game.settings import *
 class Hangman:
     
-    def __init__(self,word=None):
+    def __init__(self,word=None,words=None):
         pygame.init()
         self.window=pygame.display.set_mode((WIDTH,HEIGHT))
         self.btn_font = pygame.font.SysFont("arial", 20)
@@ -25,6 +26,9 @@ class Hangman:
         self.limbs = 0
         self.initialize_buttons()
         self.playing=True
+        self.words=words
+        if(self.words):
+            self.nextWord=0
 
 
     #handles draw functionalities of game
@@ -63,7 +67,7 @@ class Hangman:
             if self.word[x] != ' ':
                 spacedWord += '_ '
                 for i in range(len(guessedLetters)):
-                    if self.word[x].upper() == guessedLetters[i]:
+                    if self.word[x].lower() == guessedLetters[i]:
                         spacedWord = spacedWord[:-2]
                         spacedWord += self.word[x].upper() + ' '
             elif word[x] == ' ':
@@ -82,7 +86,6 @@ class Hangman:
         lostTxt = 'You Lost, press any key to play again...'
         winTxt = 'WINNER!, press any key to play again...'
         self.draw()
-        pygame.time.delay(1000)
         self.window.fill(GREEN)
 
         if winner == True:
@@ -104,7 +107,11 @@ class Hangman:
                     pygame.quit()
                 if event.type == pygame.KEYDOWN:
                     again = False
-        self.startNewGame('testing')
+        if(self.words):
+                self.startNewGame(self.words[self.nextWord])
+                self.nextWord+=1
+                
+        self.startNewGame()
     
     def randomWord(self):
         file = open('Game/resources/words.txt')
@@ -113,14 +120,14 @@ class Hangman:
 
         return f[i]
     def startNewGame(self,word=None):
+        self.word = word
         if(not word):
-            self.randomWord()
+            self.word=self.randomWord()
         for i in range(len(self.buttons)):
             self.buttons[i][4] = True
 
         self.limbs = 0
         self.guessed = []
-        self.word = word
 
     # Setup buttons
     def initialize_buttons(self):
@@ -134,6 +141,7 @@ class Hangman:
                 y = 85
             self.buttons.append([LIGHT_BLUE, x, y, 20, True, 65 + i])
             #                  [color, x_pos, y_pos, radius, visible, char])
+
     def events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -157,10 +165,84 @@ class Hangman:
                         print(self.spacedOut(self.word, self.guessed))
                         if self.spacedOut(self.word, self.guessed).count('_') == 0:
                             self.gameOver(True)
-
-
     def run(self):
         while self.playing:
             self.draw()
             self.events()
         pygame.quit()
+
+    def runSolver(self,model):
+            self.model=model
+            self.draw()
+            while self.playing:
+                self.solverEvents()
+
+
+    def predictAndUpdate(self):
+        word=[]
+        for char in self.word:
+            if(char not in self.guessed):
+                char = '_'
+            asci=ord(char)
+            if(97<=asci<=122):
+                word.append(asci-97)
+            elif(65<=asci<=90):
+                word.append(asci-65)
+            elif(char=='_'):
+                word.append(28)
+        while(len(word)<25):
+            word.append(27)
+        print(word)
+        word=np.array(word).reshape((1,25))
+        pred= self.model.predict(word)[0]
+        found =False
+        pred =pred.tolist()
+        while not found:
+            sol = np.argmax(pred)
+            char = chr(sol+97)
+            if(char not in self.guessed):
+                self.guessed.append(char)
+                # print(char)
+                self.buttons[sol][4] = False
+                if self.hang(char):
+                    if self.limbs != 5:
+                        self.limbs += 1
+                    else:
+                        self.gameOver()
+                else:
+                    print("correct!!")
+                found = True
+            else:
+                pred.remove(pred[sol])
+        if self.spacedOut(self.word, self.guessed).count('_') == 0:
+                self.gameOver(True) 
+            
+        self.draw()
+
+
+
+    def solverEvents(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.playing = False
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.playing = False
+                if(event.key==pygame.K_SPACE):
+                    self.predictAndUpdate()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                clickPos = pygame.mouse.get_pos()
+                letter = self.buttonHit(clickPos[0], clickPos[1])
+                if letter != None:
+                    self.guessed.append(chr(letter))
+                    self.buttons[letter - 65][4] = False
+                    if self.hang(chr(letter)):
+                        if self.limbs != 5:
+                            self.limbs += 1
+                        else:
+                            self.gameOver()
+                    else:
+                        
+                        if self.spacedOut(self.word, self.guessed).count('_') == 0:
+                            self.gameOver(True)

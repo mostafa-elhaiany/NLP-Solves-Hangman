@@ -13,7 +13,7 @@ def predict(model_path, original_word, to_be_predicted,max_len=25):
         elif(char=='_'):
             word.append(28)
     while(len(word)<max_len):
-        word.append(28)
+        word.append(27)
     word=np.array(word)
     print('what the model sees: \n',word)
     print('what that means: \n',to_be_predicted)

@@ -8,11 +8,17 @@ from Game.Hangman import *
 #setting random seed for training
 np.random.seed(42)
 
-# model=train(glob('data/*.txt'))
- 
-
-
+# model=train()
+all_data=glob('data/*.txt')
+words=[]
+for path in all_data:
+    words += read_data(path)
+gameWords=[]
+for i in range(10):
+    gameWords.append(words[random.randint(0,len(words)-1)])
 # predict('models/model2.h5', 'original','_r_g_nal')
 
-h=Hangman()
-h.run()
+h=Hangman(word='fun', words=gameWords)
+model = keras.models.load_model('models/model2.h5')
+# h.run()
+h.runSolver(model)
