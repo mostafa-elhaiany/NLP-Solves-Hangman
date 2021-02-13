@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 from Solver.data import *
 from Solver.models import *
 from Solver.predict import *
